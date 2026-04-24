@@ -1,20 +1,29 @@
-import React from 'react';
-import { Text } from 'react-native';
+import React, { useEffect } from 'react';
+import { Text, View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
+import {
+  useFonts,
+  Roboto_400Regular,
+  Roboto_500Medium,
+  Roboto_700Bold,
+  Roboto_900Black,
+} from '@expo-google-fonts/roboto';
+import * as Location from 'expo-location';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ProcedureDetailScreen } from './src/screens/ProcedureDetailScreen';
 import { ProgressScreen } from './src/screens/ProgressScreen';
 import { AssistantScreen } from './src/screens/AssistantScreen';
 import { OfficesScreen } from './src/screens/OfficesScreen';
 import { useTranslation } from './src/i18n/useTranslation';
+import { useAppStore } from './src/store/useAppStore';
 import { Colors } from './src/theme/colors';
+import { Typography } from './src/theme/typography';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Stack navigator for the Procedures tab — allows drilling into detail view
 function ProceduresStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -24,55 +33,114 @@ function ProceduresStack() {
   );
 }
 
+// Tab indicator component — a teal underline replaces the icon entirely.
+// Much cleaner than emoji icons and more professional.
+function TabIndicator({ focused }: { focused: boolean }) {
+  return (
+    <View style={{
+      position: 'absolute',
+      bottom: -8,
+      left: '20%',
+      right: '20%',
+      height: 3,
+      borderRadius: 2,
+      backgroundColor: focused ? Colors.primary : 'transparent',
+    }} />
+  );
+}
+
 function Tabs() {
   const { t } = useTranslation();
+
   return (
     <Tab.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textLight,
-        tabBarStyle: { borderTopColor: Colors.border },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-      }}
+        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarStyle: {
+          borderTopColor: Colors.border,
+          borderTopWidth: 1,
+          height: 58,
+          paddingBottom: 8,
+          paddingTop: 4,
+          backgroundColor: Colors.white,
+        },
+        tabBarLabelStyle: {
+          fontSize: Typography.size.xs,
+          fontFamily: Typography.fontFamily.bold,
+          letterSpacing: 0.3,
+        },
+        // No icon — label only with animated underline
+        tabBarIcon: ({ focused }) => <TabIndicator focused={focused} />,
+        tabBarIconStyle: {
+          height: 3,
+          marginTop: 0,
+        },
+      })}
     >
       <Tab.Screen
         name="Procedures"
         component={ProceduresStack}
-        options={{
-          tabBarLabel: t.tabProcedures,
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>📋</Text>,
-        }}
+        options={{ tabBarLabel: t.tabProcedures }}
       />
       <Tab.Screen
         name="MyProgress"
         component={ProgressScreen}
-        options={{
-          tabBarLabel: t.tabMyProgress,
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>✅</Text>,
-        }}
+        options={{ tabBarLabel: t.tabMyProgress }}
       />
       <Tab.Screen
         name="Assistant"
         component={AssistantScreen}
-        options={{
-          tabBarLabel: t.tabAssistant,
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>💬</Text>,
-        }}
+        options={{ tabBarLabel: t.tabAssistant }}
       />
       <Tab.Screen
         name="Offices"
         component={OfficesScreen}
-        options={{
-          tabBarLabel: t.tabOffices,
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>🏛️</Text>,
-        }}
+        options={{ tabBarLabel: t.tabOffices }}
       />
     </Tab.Navigator>
   );
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Roboto_400Regular,
+    Roboto_500Medium,
+    Roboto_700Bold,
+    Roboto_900Black,
+  });
+
+  const setUserLocation = useAppStore((s) => s.setUserLocation);
+
+  // Request location permission and store coordinates on app start.
+  // Used by the Offices screen to sort by proximity automatically.
+  useEffect(() => {
+    async function getLocation() {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      setUserLocation({
+        lat: location.coords.latitude,
+        lng: location.coords.longitude,
+      });
+    }
+
+    getLocation();
+  }, []);
+
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.white }}>
+        <ActivityIndicator color={Colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer>
       <Tabs />

@@ -7,9 +7,11 @@ import { useNavigation } from '@react-navigation/native';
 import { PROCEDURES, CATEGORIES } from '../data/procedures';
 import { ProcedureCard } from '../components/ProcedureCard';
 import { LanguageToggle } from '../components/LanguageToggle';
+import { FadeInView, SlideUpView } from '../components/Animated';
 import { useTranslation } from '../i18n/useTranslation';
 import { useAppStore } from '../store/useAppStore';
 import { Colors } from '../theme/colors';
+import { Typography } from '../theme/typography';
 
 export function HomeScreen() {
   const { t, lang } = useTranslation();
@@ -18,7 +20,6 @@ export function HomeScreen() {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
 
-  // Filter procedures by search query and active category
   const filtered = useMemo(() => {
     return PROCEDURES.filter((p) => {
       const title = lang === 'de' ? p.title_de : p.title_en;
@@ -35,17 +36,17 @@ export function HomeScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Header */}
-      <View style={styles.header}>
+      {/* Header with fade-in */}
+      <FadeInView style={styles.header}>
         <View>
           <Text style={styles.appName}>{t.appName}</Text>
           <Text style={styles.greeting}>{t.homeGreeting}</Text>
         </View>
         <LanguageToggle />
-      </View>
+      </FadeInView>
 
-      {/* Search */}
-      <View style={styles.searchWrapper}>
+      {/* Search with slide-up */}
+      <SlideUpView delay={80} style={styles.searchWrapper}>
         <TextInput
           style={styles.searchInput}
           value={search}
@@ -53,50 +54,54 @@ export function HomeScreen() {
           placeholder={t.searchPlaceholder}
           placeholderTextColor={Colors.textLight}
         />
-      </View>
+      </SlideUpView>
 
       {/* Category chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoryScroll}
-        contentContainerStyle={styles.categoryContent}
-      >
-        {CATEGORIES.map((cat) => {
-          const label = lang === 'de' ? cat.label_de : cat.label_en;
-          const active = cat.id === activeCategory;
-          return (
-            <TouchableOpacity
-              key={cat.id}
-              style={[styles.categoryChip, active && styles.categoryChipActive]}
-              onPress={() => setActiveCategory(cat.id)}
-            >
-              <Text style={[styles.categoryText, active && styles.categoryTextActive]}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      <SlideUpView delay={140}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryScroll}
+          contentContainerStyle={styles.categoryContent}
+        >
+          {CATEGORIES.map((cat) => {
+            const label = lang === 'de' ? cat.label_de : cat.label_en;
+            const active = cat.id === activeCategory;
+            return (
+              <TouchableOpacity
+                key={cat.id}
+                style={[styles.categoryChip, active && styles.categoryChipActive]}
+                onPress={() => setActiveCategory(cat.id)}
+              >
+                <Text style={[styles.categoryText, active && styles.categoryTextActive]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </SlideUpView>
 
-      {/* Procedure list */}
+      {/* Procedure list — each card slides in with stagger */}
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <ProcedureCard
-            procedure={item}
-            progress={progress[item.id]}
-            t={t}
-            lang={lang}
-            onPress={() => navigation.navigate('ProcedureDetail', { procedureId: item.id })}
-          />
+        renderItem={({ item, index }) => (
+          <SlideUpView delay={200 + index * 50}>
+            <ProcedureCard
+              procedure={item}
+              progress={progress[item.id]}
+              t={t}
+              lang={lang}
+              onPress={() => navigation.navigate('ProcedureDetail', { procedureId: item.id })}
+            />
+          </SlideUpView>
         )}
         ListEmptyComponent={
-          <View style={styles.empty}>
+          <FadeInView style={styles.empty}>
             <Text style={styles.emptyText}>No procedures found</Text>
-          </View>
+          </FadeInView>
         }
       />
     </View>
@@ -115,30 +120,72 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  appName: { fontSize: 12, fontWeight: '700', color: Colors.primary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 },
-  greeting: { fontSize: 22, fontWeight: '800', color: Colors.text },
-  searchWrapper: { padding: 16, backgroundColor: Colors.white },
+  appName: {
+    fontSize: Typography.size.xs,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  greeting: {
+    fontSize: Typography.size.xxl,
+    fontFamily: Typography.fontFamily.black,
+    color: Colors.text,
+  },
+  searchWrapper: {
+    padding: 16,
+    backgroundColor: Colors.white,
+  },
   searchInput: {
     backgroundColor: Colors.surface,
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
+    paddingVertical: 11,
+    fontSize: Typography.size.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  categoryScroll: { backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  categoryContent: { paddingHorizontal: 16, paddingBottom: 12, gap: 8, flexDirection: 'row' },
-  categoryChip: {
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: 20, backgroundColor: Colors.surface,
-    borderWidth: 1.5, borderColor: 'transparent',
+  categoryScroll: {
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  categoryChipActive: { backgroundColor: Colors.primaryLight, borderColor: Colors.primary },
-  categoryText: { fontSize: 13, fontWeight: '500', color: Colors.textMuted },
-  categoryTextActive: { color: Colors.primary, fontWeight: '700' },
+  categoryContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    paddingTop: 4,
+    gap: 8,
+    flexDirection: 'row',
+  },
+  categoryChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  categoryChipActive: {
+    backgroundColor: Colors.primaryLight,
+    borderColor: Colors.primary,
+  },
+  categoryText: {
+    fontSize: Typography.size.sm,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.textMuted,
+  },
+  categoryTextActive: {
+    color: Colors.primary,
+    fontFamily: Typography.fontFamily.bold,
+  },
   list: { padding: 16 },
   empty: { padding: 40, alignItems: 'center' },
-  emptyText: { fontSize: 15, color: Colors.textMuted },
+  emptyText: {
+    fontSize: Typography.size.md,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.textMuted,
+  },
 });

@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Procedure, UserProgress } from '../types';
+import { View, Text, StyleSheet } from 'react-native';
+import { Procedure, UserProgress, Language } from '../types';
 import { Translations } from '../i18n/translations';
 import { Colors } from '../theme/colors';
-import { Language } from '../types';
+import { Typography } from '../theme/typography';
+import { ScalePressable } from './Animated';
 
 interface Props {
   procedure: Procedure;
@@ -11,10 +12,9 @@ interface Props {
   t: Translations;
   lang: Language;
   onPress: () => void;
+  animationDelay?: number;
 }
 
-// Card shown in the procedures list.
-// Shows title, summary, difficulty, estimated time, and current progress.
 export function ProcedureCard({ procedure, progress, t, lang, onPress }: Props) {
   const title = lang === 'de' ? procedure.title_de : procedure.title_en;
   const summary = lang === 'de' ? procedure.summary_de : procedure.summary_en;
@@ -36,70 +36,68 @@ export function ProcedureCard({ procedure, progress, t, lang, onPress }: Props) 
   }[procedure.difficulty];
 
   const statusLabel = progress
-    ? progress.status === 'completed'
-      ? t.completedLabel
-      : t.inProgress
+    ? progress.status === 'completed' ? t.completedLabel : t.inProgress
     : null;
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
-
-      {/* Title and status */}
-      <View style={styles.header}>
-        <Text style={styles.title} numberOfLines={2}>{title}</Text>
-        {statusLabel && (
-          <View style={[
-            styles.statusBadge,
-            progress?.status === 'completed' ? styles.statusCompleted : styles.statusInProgress,
-          ]}>
-            <Text style={[
-              styles.statusText,
-              progress?.status === 'completed' ? styles.statusTextCompleted : styles.statusTextInProgress,
+    <ScalePressable onPress={onPress} style={styles.card}>
+      <View style={styles.inner}>
+        <View style={styles.header}>
+          <Text style={styles.title} numberOfLines={2}>{title}</Text>
+          {statusLabel && (
+            <View style={[
+              styles.statusBadge,
+              progress?.status === 'completed' ? styles.statusCompleted : styles.statusInProgress,
             ]}>
-              {statusLabel}
-            </Text>
+              <Text style={[
+                styles.statusText,
+                progress?.status === 'completed' ? styles.statusTextCompleted : styles.statusTextInProgress,
+              ]}>
+                {statusLabel}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <Text style={styles.summary} numberOfLines={2}>{summary}</Text>
+
+        <View style={styles.meta}>
+          <View style={[styles.pill, { backgroundColor: difficultyColor + '18' }]}>
+            <Text style={[styles.pillText, { color: difficultyColor }]}>{difficultyLabel}</Text>
+          </View>
+          <Text style={styles.metaText}>{procedure.estimated_days} {t.days}</Text>
+          <Text style={styles.metaText}>{totalSteps} {t.stepsTitle.toLowerCase()}</Text>
+        </View>
+
+        {progress && (
+          <View style={styles.progressContainer}>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${progressPct}%` as any }]} />
+            </View>
+            <Text style={styles.progressText}>{completedSteps}/{totalSteps}</Text>
           </View>
         )}
       </View>
-
-      {/* Summary */}
-      <Text style={styles.summary} numberOfLines={2}>{summary}</Text>
-
-      {/* Meta row — difficulty, time, steps */}
-      <View style={styles.meta}>
-        <View style={[styles.pill, { backgroundColor: difficultyColor + '20' }]}>
-          <Text style={[styles.pillText, { color: difficultyColor }]}>{difficultyLabel}</Text>
-        </View>
-        <Text style={styles.metaText}>{procedure.estimated_days} {t.days}</Text>
-        <Text style={styles.metaText}>{totalSteps} {t.stepsTitle.toLowerCase()}</Text>
-      </View>
-
-      {/* Progress bar — only shown if procedure started */}
-      {progress && (
-        <View style={styles.progressContainer}>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${progressPct}%` as any }]} />
-          </View>
-          <Text style={styles.progressText}>{completedSteps}/{totalSteps}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
+    </ScalePressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    marginBottom: 10,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  inner: {
     backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 16,
-    marginBottom: 10,
     borderWidth: 1,
     borderColor: Colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
   },
   header: {
     flexDirection: 'row',
@@ -109,11 +107,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   title: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: Typography.size.md,
+    fontFamily: Typography.fontFamily.bold,
     color: Colors.text,
     flex: 1,
-    lineHeight: 20,
+    lineHeight: 21,
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -123,13 +121,17 @@ const styles = StyleSheet.create({
   },
   statusCompleted: { backgroundColor: Colors.successLight },
   statusInProgress: { backgroundColor: Colors.accentLight },
-  statusText: { fontSize: 11, fontWeight: '700' },
+  statusText: {
+    fontSize: Typography.size.xs,
+    fontFamily: Typography.fontFamily.bold,
+  },
   statusTextCompleted: { color: Colors.success },
   statusTextInProgress: { color: Colors.warning },
   summary: {
-    fontSize: 13,
+    fontSize: Typography.size.sm,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.textMuted,
-    lineHeight: 18,
+    lineHeight: 19,
     marginBottom: 10,
   },
   meta: {
@@ -143,8 +145,15 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 20,
   },
-  pillText: { fontSize: 11, fontWeight: '600' },
-  metaText: { fontSize: 12, color: Colors.textMuted },
+  pillText: {
+    fontSize: Typography.size.xs,
+    fontFamily: Typography.fontFamily.medium,
+  },
+  metaText: {
+    fontSize: Typography.size.xs,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.textMuted,
+  },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -163,7 +172,8 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   progressText: {
-    fontSize: 11,
+    fontSize: Typography.size.xs,
+    fontFamily: Typography.fontFamily.medium,
     color: Colors.textMuted,
     width: 30,
     textAlign: 'right',
