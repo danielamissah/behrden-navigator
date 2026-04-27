@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Text, View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -20,6 +20,8 @@ import { useTranslation } from './src/i18n/useTranslation';
 import { useAppStore } from './src/store/useAppStore';
 import { Colors } from './src/theme/colors';
 import { Typography } from './src/theme/typography';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -111,34 +113,48 @@ export default function App() {
     Roboto_900Black,
   });
 
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
   const setUserLocation = useAppStore((s) => s.setUserLocation);
 
-  // Request location permission and store coordinates on app start.
-  // Used by the Offices screen to sort by proximity automatically.
+  // Check if user has seen onboarding before
+  useEffect(() => {
+    AsyncStorage.getItem('onboarding_done').then((value) => {
+      setShowOnboarding(value !== 'true');
+    });
+  }, []);
+
+  // Request location on app start
   useEffect(() => {
     async function getLocation() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
-
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-
       setUserLocation({
         lat: location.coords.latitude,
         lng: location.coords.longitude,
       });
     }
-
     getLocation();
   }, []);
 
-  if (!fontsLoaded) {
+  async function finishOnboarding() {
+    await AsyncStorage.setItem('onboarding_done', 'true');
+    setShowOnboarding(false);
+  }
+
+  // Waiting for fonts and AsyncStorage check
+  if (!fontsLoaded || showOnboarding === null) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.white }}>
         <ActivityIndicator color={Colors.primary} />
       </View>
     );
+  }
+
+  if (showOnboarding) {
+    return <OnboardingScreen onDone={finishOnboarding} />;
   }
 
   return (

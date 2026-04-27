@@ -9,18 +9,19 @@ import { useAppStore } from '../store/useAppStore';
 import { haversineDistance, formatDistance } from '../utils/distance';
 import { Colors } from '../theme/colors';
 import { Typography } from '../theme/typography';
-import { FadeInView, SlideUpView } from '../components/Animated';
-import { ScalePressable } from '../components/Animated';
+import { FadeInView, SlideUpView, ScalePressable } from '../components/Animated';
 
 export function OfficesScreen() {
   const { t } = useTranslation();
+  // Subscribing directly to userLocation means this component re-renders
+  // the moment location is resolved in App.tsx — no manual refresh needed
   const userLocation = useAppStore((s) => s.userLocation);
 
-  // Sort offices by distance when user location is available.
-  // Attach distance string to each office for display.
   const officesWithDistance = useMemo(() => {
     return OFFICES.map((office) => {
-      if (!userLocation) return { ...office, distance: null, distanceKm: Infinity };
+      if (!userLocation) {
+        return { ...office, distance: null, distanceKm: Infinity };
+      }
       const km = haversineDistance(
         userLocation.lat,
         userLocation.lng,
@@ -33,6 +34,7 @@ export function OfficesScreen() {
         distanceKm: km,
       };
     }).sort((a, b) => a.distanceKm - b.distanceKm);
+    // Re-runs automatically when userLocation changes in the store
   }, [userLocation]);
 
   return (
@@ -46,6 +48,8 @@ export function OfficesScreen() {
             <View style={styles.header}>
               <Text style={styles.title}>{t.officesTitle}</Text>
               <Text style={styles.subtitle}>{t.officesSubtitle}</Text>
+
+              {/* Location status pill */}
               {userLocation ? (
                 <View style={styles.locationPill}>
                   <Text style={styles.locationText}>
@@ -64,7 +68,7 @@ export function OfficesScreen() {
         }
         renderItem={({ item, index }) => (
           <SlideUpView delay={index * 80}>
-            <OfficeCard office={item} t={t} />
+            <OfficeCard office={item as any} t={t} />
           </SlideUpView>
         )}
       />
@@ -75,8 +79,6 @@ export function OfficesScreen() {
 function OfficeCard({ office, t }: { office: any; t: any }) {
   return (
     <View style={styles.card}>
-
-      {/* Header */}
       <View style={styles.cardHeader}>
         <View style={styles.cardTitles}>
           <Text style={styles.officeName}>{office.name}</Text>
@@ -86,7 +88,6 @@ function OfficeCard({ office, t }: { office: any; t: any }) {
           <View style={styles.cityBadge}>
             <Text style={styles.cityText}>{office.city}</Text>
           </View>
-          {/* Distance badge — only shown when location is available */}
           {office.distance && (
             <View style={styles.distanceBadge}>
               <Text style={styles.distanceText}>{office.distance}</Text>
@@ -97,7 +98,6 @@ function OfficeCard({ office, t }: { office: any; t: any }) {
 
       <Text style={styles.address}>{office.address}</Text>
 
-      {/* Opening hours */}
       {office.hours && office.hours.length > 0 && (
         <View style={styles.hoursBox}>
           <Text style={styles.hoursTitle}>{t.officeHours}</Text>
@@ -110,7 +110,6 @@ function OfficeCard({ office, t }: { office: any; t: any }) {
         </View>
       )}
 
-      {/* Action buttons with scale press animation */}
       <View style={styles.actions}>
         {office.phone && (
           <ScalePressable

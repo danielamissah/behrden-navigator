@@ -105,15 +105,18 @@ export function AssistantScreen() {
       {/* Input bar */}
       <View style={styles.inputRow}>
         <TextInput
-          style={styles.input}
-          value={input}
-          onChangeText={setInput}
-          placeholder={t.assistantPlaceholder}
-          placeholderTextColor={Colors.textLight}
-          multiline
-          maxLength={500}
-          onSubmitEditing={send}
-        />
+  style={styles.input}
+  value={input}
+  onChangeText={setInput}
+  placeholder={t.assistantPlaceholder}
+  placeholderTextColor={Colors.textLight}
+  maxLength={500}
+  returnKeyType="send"
+  blurOnSubmit={false}
+  onSubmitEditing={() => {
+    if (input.trim()) send();
+  }}
+/>
         <TouchableOpacity
           style={[styles.sendBtn, (!input.trim() || loading) && styles.sendBtnDisabled]}
           onPress={send}
